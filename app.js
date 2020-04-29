@@ -47,7 +47,8 @@ function getInvitees() {
 
 function saveInvitee(name, index = -1) { // Index to save in exact position as where the invitee was edited, otherwise add to the end of the array
     const invitees = getInvitees();
-    if (invitees.findIndex(x => x.name === name) > -1) { // Iterate over each object's name property in the array. if name is found (meaning, not -1), reject invitee.
+    const i = invitees.findIndex(x => x.name === name);
+    if (i > -1 && i !== index) { // Iterate over each object's name property in the array. if name is found other than current one (meaning, not -1), reject invitee other.
         alert(`${name} is already an invitee`);
         return false;
     }
@@ -57,7 +58,7 @@ function saveInvitee(name, index = -1) { // Index to save in exact position as w
     } else {
         // Use splice to insert at given index without deleting an element. 
         // Add object to the array with existing properties and values.
-        invitees.splice(index, 0, {name: name, status: tempProperties.status, option: tempProperties.option, comments: tempProperties.comments}); 
+        invitees.splice(index, 1, {name: name, status: invitees[index].status, option: invitees[index].option, comments: invitees[index].comments}); 
     }
     localStorage.setItem('invitees', JSON.stringify(invitees));
     return true;
@@ -128,7 +129,7 @@ function createLi(invitee) {
 
 
 let index = -1;
-let tempProperties = {};
+let removedName;
 // Load all invitees stored in local storage when page loads.
 const invitees = getInvitees();
 invitees.forEach(invitee => {
@@ -160,7 +161,12 @@ ul.addEventListener('change', (e) => {
         const listItem = label.parentNode;
         const span = listItem.querySelector('span');
         const invitees = getInvitees();
-        const index = invitees.findIndex(x => x.name === span.textContent);
+        let index;
+        if (span !== null) {
+            index = invitees.findIndex(x => x.name === span.textContent);
+        } else {
+            index = invitees.findIndex(x => x.name === removedName);
+        }
         if (selection.tagName === 'SELECT'){ // e.target.tagName of 'INPUT' can also be fired inside the ul when editing the invitee. This avoids a TypeError when getting the option
             const option = selection.options[selection.selectedIndex].value; // Get the value of the option chosen.
             if (option !== 'unknown') {
@@ -196,10 +202,9 @@ ul.addEventListener('click', (e) => {
                 const input = document.createElement('input');
                 const invitees = getInvitees();
                 index = invitees.findIndex(x => x.name === span.textContent);
-                tempProperties = invitees[index];
                 input.type = 'text';
                 input.value = span.textContent;
-                removeInvitee(input.value);
+                removedName = input.value;
                 li.insertBefore(input, span);
                 li.removeChild(span);
                 button.textContent = 'save';
@@ -214,7 +219,7 @@ ul.addEventListener('click', (e) => {
                     button.textContent = 'edit';
                 }
             }
-    };
+        };
 
         // Select and run action in button's name  
         nameActions[action]();
