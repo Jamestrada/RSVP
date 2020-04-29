@@ -56,7 +56,7 @@ function saveInvitee(name, index = -1) { // Index to save in exact position as w
         // Add object to the array with default properties and values.
         invitees.push({name: name, status: 'Confirm', option: 'unknown', comments: ''});
     } else {
-        // Use splice to insert at given index without deleting an element. 
+        // Use splice to insert at given index replacing old object. 
         // Add object to the array with existing properties and values.
         invitees.splice(index, 1, {name: name, status: invitees[index].status, option: invitees[index].option, comments: invitees[index].comments}); 
     }
@@ -75,6 +75,24 @@ function removeInvitee(invitee) {
     const index = invitees.findIndex(x => x.name === invitee);
     invitees.splice(index, 1);
     localStorage.setItem('invitees', JSON.stringify(invitees));
+}
+
+function disableLis(index) {
+    const lis = ul.children;
+    for (let i = 0; i < lis.length; i += 1) {
+        let li = lis[i];
+        if (i != index) {
+            li.classList.add('disabled');
+        }
+    }
+}
+
+function enableLis() {
+    const lis = ul.children;
+    for (let i = 0; i < lis.length; i += 1) {
+        let li = lis[i];
+        li.classList.remove('disabled');
+    }
 }
 
 function createLi(invitee) {
@@ -208,6 +226,7 @@ ul.addEventListener('click', (e) => {
                 li.insertBefore(input, span);
                 li.removeChild(span);
                 button.textContent = 'save';
+                disableLis(index);
             },
             save: () => {
                 const input = li.querySelector('input'); // const input = li.firstElementChild;
@@ -218,6 +237,7 @@ ul.addEventListener('click', (e) => {
                     li.removeChild(input);
                     button.textContent = 'edit';
                 }
+                enableLis();
             }
         };
 

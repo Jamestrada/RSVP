@@ -138,6 +138,12 @@ div > label {
   color: rgba(88, 183, 205, 1);
 }
 
+/* disabled */
+.disabled {
+  pointer-events: none;
+  opacity: 0.4;
+}
+
 /* ================================= 
   Media Queries
 ==================================== */
