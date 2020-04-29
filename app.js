@@ -41,29 +41,42 @@ function getInvitees() {
     if (invitees) {
         return JSON.parse(invitees);
     } else {
-        return [];
+        return []; // Initializes array
     }
 }
 
-function saveInvitee(invitee) {
+function saveInvitee(name, index = -1) { // Index to save in exact position as where the invitee was edited, otherwise add to the end of the array
     const invitees = getInvitees();
-    if (invitees.indexOf(invitee) > -1) {
-        alert(`${invitee} is already an invitee`);
+    if (invitees.findIndex(x => x.name === name) > -1) { // Iterate over each object's name property in the array. if name is found (meaning, not -1), reject invitee.
+        alert(`${name} is already an invitee`);
         return false;
-    } 
-    invitees.push(invitee);
+    }
+    if (index < 0) {
+        // Add object to the array with default properties and values.
+        invitees.push({name: name, status: 'Confirm', option: 'unknown', comments: ''});
+    } else {
+        // Use splice to insert at given index without deleting an element. 
+        // Add object to the array with existing properties and values.
+        invitees.splice(index, 0, {name: name, status: tempProperties.status, option: tempProperties.option, comments: tempProperties.comments}); 
+    }
     localStorage.setItem('invitees', JSON.stringify(invitees));
     return true;
 }
 
+function editProperties(index, property, value) {
+    const invitees = getInvitees();
+    invitees[index][property] = value;
+    localStorage.setItem('invitees', JSON.stringify(invitees));
+}
+
 function removeInvitee(invitee) {
     const invitees = getInvitees();
-    const index = invitees.indexOf(invitee);
+    const index = invitees.findIndex(x => x.name === invitee);
     invitees.splice(index, 1);
     localStorage.setItem('invitees', JSON.stringify(invitees));
 }
 
-function createLi(text) {
+function createLi(invitee) {
     function createElement(elementName, property, value) {
         const element = document.createElement(elementName);
         element[property] = value;
@@ -73,6 +86,9 @@ function createLi(text) {
     function appendToLi(elementName, property, value) {
         const element = createElement(elementName, property, value);
         li.appendChild(element);
+        if (value === 'Confirmed'){
+            li.className = 'responded';
+        }
         return element;
     }
 
@@ -93,17 +109,27 @@ function createLi(text) {
     }
   
     const li = document.createElement('li');
-    appendToLi('span', 'textContent', text);
-    appendToLi('label', 'textContent', 'Confirm')
-    .appendChild(createOptions('select', ['className', 'name'], ['status', 'options']));
+    appendToLi('span', 'textContent', invitee.name);
+    if (invitee.status) {
+        appendToLi('label', 'textContent', invitee.status)
+        .appendChild(createOptions('select', ['className', 'name'], ['status', 'options']));
+    } else {
+        appendToLi('label', 'textContent', 'Confirm')
+        .appendChild(createOptions('select', ['className', 'name'], ['status', 'options']));
+    }
     appendToLi('h4', 'textContent', 'Comments: ')
     .appendChild(createElement('textarea', 'className', 'comments'));
     appendToLi('button', 'textContent', 'edit');
     appendToLi('button', 'textContent', 'remove');
+    li.querySelector('select').value = invitee.option; // Load saved rsvp option status.
+    li.querySelector('textarea').value = invitee.comments; // Load saved comments.
     return li;
 }
 
-// load all invitees stored in local storage
+
+let index = -1;
+let tempProperties = {};
+// Load all invitees stored in local storage when page loads.
 const invitees = getInvitees();
 invitees.forEach(invitee => {
     const li = createLi(invitee);
@@ -118,25 +144,38 @@ form.addEventListener('submit', (e) => {
         alert('The field cannot be empty');
     } else {
     if (saveInvitee(text)){
-        const li = createLi(text);
+        const invitees = getInvitees();
+        const index = invitees.findIndex(x => x.name === text);
+        const invitee = invitees[index];
+        const li = createLi(invitee);
         ul.appendChild(li);
     }
     }
 });
 
 ul.addEventListener('change', (e) => {
-    if (e.target.tagName === 'SELECT'){ // e.target.tagName of 'INPUT' can also be fired inside the ul when editing the invitee. This avoids a TypeError when getting the option
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT'){
         const selection = e.target;
-        const option = selection.options[selection.selectedIndex].value; // get the value of the option chosen
         const label = selection.parentNode;
         const listItem = label.parentNode;
-
-        if (option !== 'unknown') {
-            label.firstChild.nodeValue = 'Confirmed'; // using childNodes[0] would be the same
-            listItem.className = 'responded';
-        } else {
-            label.childNodes[0].nodeValue = 'Confirm'; // using firstChild (not firstElementChild) would be the same
-            listItem.className = '';
+        const span = listItem.querySelector('span');
+        const invitees = getInvitees();
+        const index = invitees.findIndex(x => x.name === span.textContent);
+        if (selection.tagName === 'SELECT'){ // e.target.tagName of 'INPUT' can also be fired inside the ul when editing the invitee. This avoids a TypeError when getting the option
+            const option = selection.options[selection.selectedIndex].value; // Get the value of the option chosen.
+            if (option !== 'unknown') {
+                label.firstChild.nodeValue = 'Confirmed'; // Using childNodes[0] would be the same.
+                listItem.className = 'responded';
+                editProperties(index, 'status', 'Confirmed');
+            } else {
+                label.childNodes[0].nodeValue = 'Confirm'; // Using firstChild (not firstElementChild) would be the same.
+                listItem.className = '';
+                editProperties(index, 'status', 'Confirm');
+            }
+            editProperties(index, 'option', option);
+        }
+        if (selection.tagName === 'TEXTAREA') {
+            editProperties(index, 'comments', selection.value);
         }
     }
 });
@@ -155,6 +194,9 @@ ul.addEventListener('click', (e) => {
             edit: () => {
                 const span = li.firstElementChild;
                 const input = document.createElement('input');
+                const invitees = getInvitees();
+                index = invitees.findIndex(x => x.name === span.textContent);
+                tempProperties = invitees[index];
                 input.type = 'text';
                 input.value = span.textContent;
                 removeInvitee(input.value);
@@ -166,7 +208,7 @@ ul.addEventListener('click', (e) => {
                 const input = li.querySelector('input'); // const input = li.firstElementChild;
                 const span = document.createElement('span');
                 span.textContent = input.value;
-                if (saveInvitee(span.textContent)){
+                if (saveInvitee(span.textContent, index)){ // Check if edited name doesn't exist already and save it to the local storage array.
                     li.insertBefore(span, input);
                     li.removeChild(input);
                     button.textContent = 'edit';
@@ -174,7 +216,7 @@ ul.addEventListener('click', (e) => {
             }
     };
 
-        // select and run action in button's name  
+        // Select and run action in button's name  
         nameActions[action]();
     }
 });
